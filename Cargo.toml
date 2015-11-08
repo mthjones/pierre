@@ -1,0 +1,21 @@
+[package]
+name = "pierre"
+version = "0.1.0"
+authors = ["Matt Jones <mthjones@gmail.com>"]
+build = "build.rs"
+
+[features]
+default = ["serde_codegen"]
+nightly = ["serde_macros"]
+
+[dependencies]
+slack = { path = "../slack-rs" }
+hyper = "*"
+postgres = "*"
+serde = "*"
+serde_json = "*"
+serde_macros = { version = "*", optional = true }
+
+[build-dependencies]
+serde_codegen = { version = "*", optional = true }
+syntex = "*"
