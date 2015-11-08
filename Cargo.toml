@@ -9,9 +9,9 @@ default = ["serde_codegen"]
 nightly = ["serde_macros"]
 
 [dependencies]
-slack = { path = "../slack-rs" }
+slack = { git = "https://github.com/mthjones/slack-rs", branch = "attachment-api" }
 hyper = "*"
-postgres = "*"
+postgres = "0.10.0"
 serde = "*"
 serde_json = "*"
 serde_macros = { version = "*", optional = true }
