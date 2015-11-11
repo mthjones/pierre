@@ -17,10 +17,11 @@ pub struct Project {
     pub id: u32,
     pub key: String,
     pub name: String,
-    pub public: bool,
+    pub public: Option<bool>,
     pub description: Option<String>,
     #[serde(rename="type")]
     pub _type: String,
+    pub owner: Option<User>,
     pub link: Link,
     pub links: HashMap<String, Vec<LinkHref>>,
 }
@@ -48,6 +49,7 @@ pub struct Repository {
     #[serde(rename="statusMessage")]
     pub status_message: String,
     pub forkable: bool,
+    pub origin: Option<Box<Repository>>,
     pub project: Project,
     pub public: bool,
     pub link: Link,
@@ -60,7 +62,7 @@ pub struct Repository {
 pub struct User {
     pub name: String,
     #[serde(rename="emailAddress")]
-    pub email_address: String,
+    pub email_address: Option<String>,
     pub id: u32,
     #[serde(rename="displayName")]
     pub display_name: String,
