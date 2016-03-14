@@ -1,5 +1,5 @@
 [package]
-name = "pierre"
+name = "pierre_daemon"
 version = "0.1.0"
 authors = ["Matt Jones <mthjones@gmail.com>"]
 build = "build.rs"
@@ -15,6 +15,7 @@ postgres = "0.10.0"
 serde = "*"
 serde_json = "*"
 serde_macros = { version = "*", optional = true }
+rand = "*"
 
 [build-dependencies]
 serde_codegen = { version = "*", optional = true }

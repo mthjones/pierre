@@ -36,16 +36,21 @@ impl Retriever<PullRequest> for StashPullRequestDataRetriever {
         let mut headers = Headers::new();
         headers.set(Authorization(Basic { username: self.username.clone(), password: self.password.clone() }));
         headers.set(hyper::header::Connection::close());
+        headers.set(hyper::header::UserAgent("pierre/1.0".to_owned()));
 
         let url = format!("{}/rest/api/1.0/projects/{}/repos/{}/pull-requests",
             self.base_url,
             self.project.id.to_uppercase(),
             self.project.repo.to_lowercase());
+            
+        println!("{}", url);
 
         let mut response = try!(self.client.get(&url).headers(headers.clone()).send());
 
         let mut body = String::new();
         try!(response.read_to_string(&mut body));
+        
+        println!("{}", body);
 
         let prs: PagedData<PullRequest> = try!(serde_json::from_str(&body));
         Ok(prs.values)

@@ -1,6 +1,6 @@
 use slack_api;
 
-struct AttachmentAuthor {
+pub struct AttachmentAuthor {
     name: String,
     link: Option<String>,
     icon: Option<String>,
