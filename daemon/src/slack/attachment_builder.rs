@@ -1,6 +1,6 @@
 use slack_api;
 
-struct AttachmentAuthor {
+pub struct AttachmentAuthor {
     name: String,
     link: Option<String>,
     icon: Option<String>,
@@ -117,7 +117,7 @@ impl AttachmentBuilder {
             author_link: self.author.as_ref().and_then(|a| a.link.clone()),
             title: self.title,
             title_link: self.title_link,
-            text: Some(self.text),
+            text: self.text,
             fields: if self.fields.is_empty() {
                 None
             } else {

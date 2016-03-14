@@ -42,11 +42,15 @@ impl Retriever<PullRequest> for StashPullRequestDataRetriever {
             self.base_url,
             self.project.id.to_uppercase(),
             self.project.repo.to_lowercase());
+            
+        println!("{}", url);
 
         let mut response = try!(self.client.get(&url).headers(headers.clone()).send());
 
         let mut body = String::new();
         try!(response.read_to_string(&mut body));
+        
+        println!("{}", body);
 
         let prs: PagedData<PullRequest> = try!(serde_json::from_str(&body));
         Ok(prs.values)
