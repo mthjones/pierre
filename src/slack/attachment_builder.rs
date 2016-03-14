@@ -117,7 +117,7 @@ impl AttachmentBuilder {
             author_link: self.author.as_ref().and_then(|a| a.link.clone()),
             title: self.title,
             title_link: self.title_link,
-            text: self.text,
+            text: Some(self.text),
             fields: if self.fields.is_empty() {
                 None
             } else {

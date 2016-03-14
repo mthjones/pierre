@@ -36,6 +36,7 @@ impl Retriever<PullRequest> for StashPullRequestDataRetriever {
         let mut headers = Headers::new();
         headers.set(Authorization(Basic { username: self.username.clone(), password: self.password.clone() }));
         headers.set(hyper::header::Connection::close());
+        headers.set(hyper::header::UserAgent("pierre/1.0".to_owned()));
 
         let url = format!("{}/rest/api/1.0/projects/{}/repos/{}/pull-requests",
             self.base_url,

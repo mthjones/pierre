@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::error;
 
+use rand;
 use hyper;
 use slack_api;
 use postgres::{Connection,SslMode};
@@ -32,6 +33,7 @@ impl SlackPullRequestEventHandler {
     }
 
     fn build_attachment_from_pr(&self, pr: &::stash::PullRequest) -> Result<slack_api::Attachment, String> {
+        let mut rng = rand::thread_rng();
         let pr = pr.clone();
         let reviewers = pr.reviewers.iter()
             .filter_map(|r| self.user_map.get(&r.user.name).cloned())
@@ -49,12 +51,23 @@ impl SlackPullRequestEventHandler {
         let author = AttachmentAuthorBuilder::with_name(pr.author.user.name)
             .set_link(pr.author.user.links.get("self").unwrap()[0].href.clone())
             .build();
-        Ok(AttachmentBuilder::with_text_and_fallback(text, fallback)
+
+        let mut builder = AttachmentBuilder::with_text_and_fallback(text, fallback)
             .set_color("#00CC99")
             .set_title(pr.title, pr.links.get("self").map(|links| links[0].href.clone()))
             .set_author(author)
-            .add_field(reviewers_field)
-            .build())
+            .add_field(reviewers_field);
+
+        if !reviewers.is_empty() {
+            let assigned_demoer_field = slack_api::api::AttachmentField {
+                title: "Assigned Demo Reviewer".to_owned(),
+                value: rand::sample(&mut rng, reviewers.clone().into_iter(), 1)[0].clone(),
+                short: true
+            };
+            builder = builder.add_field(assigned_demoer_field);
+        }
+
+        Ok(builder.build())
     }
 }
 
