@@ -1,5 +1,5 @@
 [root]
-name = "pierre"
+name = "pierre_daemon"
 version = "0.1.0"
 dependencies = [
  "hyper 0.6.15 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -11,6 +11,7 @@ dependencies = [
  "serde_macros 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "slack 0.11.0 (git+https://github.com/mthjones/slack-rs?branch=attachment-api)",
  "syntex 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.1.33 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

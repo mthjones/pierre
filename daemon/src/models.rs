@@ -2,7 +2,7 @@ use postgres::{self, Connection};
 
 use ::stash::PullRequest;
 
-#[derive(PartialEq,Eq)]
+#[derive(Clone,PartialEq,Eq)]
 pub struct PullRequestDataModel {
     pub id: u32,
     pub project: String,

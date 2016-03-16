@@ -31,7 +31,7 @@ impl SlackPullRequestEventHandler {
             token: token
         }
     }
-
+    
     fn build_attachment_from_pr(&self, pr: &::stash::PullRequest) -> Result<slack_api::Attachment, String> {
         let mut rng = rand::thread_rng();
         let pr = pr.clone();
@@ -72,24 +72,41 @@ impl SlackPullRequestEventHandler {
 }
 
 impl EventHandler<::stash::PullRequest> for SlackPullRequestEventHandler {
+        
     fn on_data(&mut self, prs: Vec<::stash::PullRequest>) -> Result<(), Box<error::Error>> {
-        let conn = try!(Connection::connect(&self.conn_str[..], &SslMode::None));
-        let processed_prs = try!(PullRequestDataModel::all(&conn));
-
-        for pr in prs.into_iter().filter(|pr| !processed_prs.contains(&pr.clone().into())) {
-            match self.build_attachment_from_pr(&pr) {
-                Ok(attachment) => {
-                    try!(PullRequestDataModel::create(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug));
-                    if let Err(e) = slack_api::api::chat::post_message(&self.client, &self.token, &self.channel, "*New Pull Request!*", Some("pierre"), Some(true), None, None, Some(vec![attachment]), None, None, None, None) {
-                        PullRequestDataModel::delete(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug).unwrap();
-                        return Err(Box::new(e));
-                    }
-                },
-                Err(_) => {
-                    PullRequestDataModel::create(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug).unwrap();
-                }
+       let conn = try!(Connection::connect(&self.conn_str[..], &SslMode::None));
+       let processed_prs = try!(PullRequestDataModel::all(&conn));
+       let processed_prs_clone = processed_prs.clone();
+       let prs_clone = prs.clone();
+       let mut prs_to_save = Vec::<PullRequestDataModel>::new();
+       
+       //get all prs in the db as PullRequestDataModels that are also in the stash repository
+       for pr_to_save in prs_clone.into_iter().filter(|pr_to_save| processed_prs.contains(&pr_to_save.clone().into())){
+           prs_to_save.push(PullRequestDataModel::from(pr_to_save));
+       }
+       
+       //remove any PR in database but not in stash repo
+       for pr_to_remove in processed_prs_clone.into_iter().filter(|pr_to_remove| !prs_to_save.contains(&pr_to_remove.clone().into())){
+            if let Err(e) = PullRequestDataModel::delete(&conn, pr_to_remove.id, &pr_to_remove.project, &pr_to_remove.repo){
+                 return Err(Box::new(e));
             }
-        }
-        Ok(())
+       }
+       //For any received PR not in the DB and converts it into a PullRequestDataModel
+       for pr in prs.into_iter().filter(|pr| !processed_prs.contains(&pr.clone().into())) {
+           match self.build_attachment_from_pr(&pr) {
+               Ok(attachment) => {
+                   try!(PullRequestDataModel::create(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug));
+                   if let Err(e) = slack_api::api::chat::post_message(&self.client, &self.token, &self.channel, "*New Pull Request!*", Some("pierre"), Some(true), None, None, Some(vec![attachment]), None, None, None, None) {
+                       PullRequestDataModel::delete(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug).unwrap();
+                       return Err(Box::new(e));
+                   }
+               },
+               //get matt to expain this
+               Err(_) => {
+                   PullRequestDataModel::create(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug).unwrap();
+               }
+           }
+       }
+       Ok(())
     }
 }
