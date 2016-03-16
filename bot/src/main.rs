@@ -3,7 +3,6 @@ extern crate pierre;
 
 mod slack;
 
-//use std::collections::String;
 use pierre::config::Config;
 use slack::EventHandler;
 
