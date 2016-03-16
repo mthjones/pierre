@@ -1,5 +1,5 @@
 [package]
-name = "pierre_daemon"
+name = "pierre"
 version = "0.1.0"
 authors = ["Matt Jones <mthjones@gmail.com>"]
 build = "build.rs"
@@ -9,14 +9,9 @@ default = ["serde_codegen"]
 nightly = ["serde_macros"]
 
 [dependencies]
-pierre = { path = "../lib" }
-slack = { git = "https://github.com/mthjones/slack-rs", branch = "attachment-api" }
-hyper = "*"
-postgres = "0.10.0"
 serde = "*"
 serde_json = "*"
 serde_macros = { version = "*", optional = true }
-rand = "*"
 
 [build-dependencies]
 serde_codegen = { version = "*", optional = true }

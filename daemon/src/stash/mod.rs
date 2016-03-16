@@ -4,6 +4,7 @@ use std::io::Read;
 use serde_json;
 use hyper;
 use hyper::header::{Headers, Authorization, Basic};
+use pierre::config;
 
 use ::watcher::Retriever;
 
@@ -15,11 +16,11 @@ pub struct StashPullRequestDataRetriever {
     username: String,
     password: Option<String>,
     client: hyper::Client,
-    project: ::config::Project
+    project: config::Project
 }
 
 impl StashPullRequestDataRetriever {
-    pub fn new(project: ::config::Project, auth: (String, Option<String>), base_url: String) -> Self {
+    pub fn new(project: config::Project, auth: (String, Option<String>), base_url: String) -> Self {
         let client = hyper::Client::new();
         StashPullRequestDataRetriever {
             base_url: base_url,
