@@ -1,3 +1,5 @@
+mod manager;
+
 use slack_api::{self, Event, Message};
 use pierre::{self, config};
 
@@ -21,7 +23,15 @@ impl slack_api::EventHandler for EventHandler {
         match event {
             Ok(&Event::Message(Message::Standard { text: Some(ref t), .. } )) => {
                 match t.find(&format!("@{}", self.user)) {
-                    Some(_) => println!("You talkin' to me?"),
+                    Some(_) => {
+                        println!("You talkin' to me?");
+                        let re = Regex::new(format!(r"<@{}> watch (\w)\\(\w) --notify (\w)", self.user)).unwrap();
+                        let cap = re.captures(text).unwrap();
+                        let proj = cap.at(0);
+                        let repo = cap.at(1);
+                        let scope = cap.at(2);
+                        manager::configure_repos(proj, repo, scope);
+                    }
                     _ => println!("Not my concern"),
                 }
             },
