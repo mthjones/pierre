@@ -1,6 +1,17 @@
 use slack_api::{self, Event, Message};
+use pierre::{self, config};
 
-pub struct EventHandler;
+pub struct EventHandler {
+    user: String,
+}
+
+impl EventHandler {
+    pub fn new(user: String) -> Self {
+        EventHandler {
+            user: user,
+        }
+    }
+}
 
 #[allow(unused_variables)]
 impl slack_api::EventHandler for EventHandler {
@@ -9,7 +20,7 @@ impl slack_api::EventHandler for EventHandler {
         
         match event {
             Ok(&Event::Message(Message::Standard { text: Some(ref t), .. } )) => {
-                match t.find("@U0D1H4YFQ") {
+                match t.find(&format!("@{}", self.user)) {
                     Some(_) => println!("You talkin' to me?"),
                     _ => println!("Not my concern"),
                 }

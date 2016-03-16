@@ -19,6 +19,7 @@ pub struct Project {
 
 #[derive(Debug,Clone,Serialize,Deserialize)]
 pub struct SlackConfig {
+    pub user: String,
     pub token: String,
     pub channel: String,
 }
