@@ -109,7 +109,7 @@ impl AttachmentBuilder {
 
     pub fn build(self) -> slack_api::api::Attachment {
         slack_api::api::Attachment {
-            fallback: self.fallback,
+            fallback: Some(self.fallback),
             color: self.color,
             pretext: self.pretext,
             author_name: self.author.as_ref().map(|a| a.name.clone()),
@@ -117,7 +117,7 @@ impl AttachmentBuilder {
             author_link: self.author.as_ref().and_then(|a| a.link.clone()),
             title: self.title,
             title_link: self.title_link,
-            text: self.text,
+            text: Some(self.text),
             fields: if self.fields.is_empty() {
                 None
             } else {

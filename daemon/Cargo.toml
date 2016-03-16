@@ -11,7 +11,7 @@ nightly = ["serde_macros"]
 [dependencies]
 pierre = { path = "../lib" }
 slack = { git = "https://github.com/mthjones/slack-rs", branch = "attachment-api" }
-hyper = "*"
+hyper = "0.7.2"
 postgres = "0.10.0"
 serde = "*"
 serde_json = "*"
