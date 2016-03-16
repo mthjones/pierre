@@ -1,8 +1,9 @@
 [root]
-name = "pierre"
+name = "pierre_daemon"
 version = "0.1.0"
 dependencies = [
  "hyper 0.6.15 (registry+https://github.com/rust-lang/crates.io-index)",
+ "pierre 0.1.0",
  "postgres 0.10.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.12 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -243,6 +244,16 @@ dependencies = [
 name = "phf_shared"
 version = "0.7.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "pierre"
+version = "0.1.0"
+dependencies = [
+ "serde 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_codegen 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "serde_json 0.6.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "syntex 0.17.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "pkg-config"
