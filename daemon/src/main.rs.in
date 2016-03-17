@@ -11,6 +11,8 @@ mod stash;
 mod watcher;
 mod slack;
 mod models;
+#[macro_use]
+mod macros;
 
 use watcher::Watcher;
 use pierre::config::Config;
@@ -19,15 +21,25 @@ use stash::StashPullRequestDataRetriever;
 use models::PullRequestDataModel;
 
 fn main() {
+    
     log4rs::init_file("config/log.yaml", Default::default()).unwrap();    
+     
     info!("Starting Pierre Daemon");
-    let home_dir = std::env::home_dir().expect("Could not find home directory to place config");
+    let home_dir = match std::env::home_dir() {
+        Some(val) => (val),
+        None => {
+            let message = format!("Could not find home directory to place config"); 
+            error!("{}",&message);
+            panic!(message)
+        }
+    };
+    
     let filepath = format!("{}/.pierre_config", home_dir.to_string_lossy());
-    let mut config = Config::load(&filepath).expect(&format!("Could not load config at {}", filepath));
-
+    let mut config = unwrap_result_or_log!(Config::load(&filepath));
+    
     {
-        let conn = Connection::connect(&config.db[..], &SslMode::None).unwrap();
-        PullRequestDataModel::initialize(&conn).unwrap();
+        let conn =  unwrap_result_or_log!(Connection::connect(&config.db[..], &SslMode::None));
+         unwrap_result_or_log!(PullRequestDataModel::initialize(&conn));
     }
 
     if config.stash.password.is_none() {
@@ -45,6 +57,6 @@ fn main() {
     }).collect::<Vec<_>>();
 
     for watcher in watchers {
-        watcher.join().unwrap();
+        unwrap_result_or_log!(watcher.join());
     }
 }
