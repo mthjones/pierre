@@ -14,8 +14,7 @@ impl RepoPrefsDataModel {
             project     VARCHAR(10),
             repo        VARCHAR(100),
             PRIMARY KEY (audience, project, repo)
-        )", &[]));
-        
+        )", &[]));        
         Ok(())
     }
 
@@ -29,7 +28,7 @@ impl RepoPrefsDataModel {
         }).collect::<Vec<_>>())
     }
 
-    pub fn create(conn: &Connection, audience: &String, project: &String, repo: &String) -> Result<(), postgres::error::Error> {
+    pub fn insert(conn: &Connection, audience: &String, project: &String, repo: &String) -> Result<(), postgres::error::Error> {
         try!(conn.execute("INSERT INTO repo_prefs (audience, project, repo) VALUES ($1, $2, $3)", &[audience, project, repo]));
         Ok(())
     }

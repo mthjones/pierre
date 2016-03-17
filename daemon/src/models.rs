@@ -17,13 +17,6 @@ impl PullRequestDataModel {
             repo        VARCHAR(100),
             PRIMARY KEY (id, project, repo)
         )", &[]));
-        try!(conn.execute("CREATE TABLE IF NOT EXISTS aud_prefs (
-            audience    VARCHAR(10),
-            project     VARCHAR(10),
-            repo        VARCHAR(100),
-            PRIMARY KEY (audience, project, repo)
-        )", &[]));
-        
         Ok(())
     }
 
@@ -42,11 +35,6 @@ impl PullRequestDataModel {
         Ok(())
     }
     
-    pub fn create_aud_pref(conn: &Connection, audience: String, project: &String, repo: &String) -> Result<(), postgres::error::Error> {
-        try!(conn.execute("INSERT INTO aud_prefs (audience, project, repo) VALUES ($1, $2, $3)", &[audience, project, repo]));
-        Ok(())
-    }
-
     pub fn delete(conn: &Connection, id: u32, project: &String, repo: &String) -> Result<(), postgres::error::Error> {
         try!(conn.execute("DELETE FROM processed_prs WHERE id = $1 AND project = $2 AND repo = $3", &[&id, project, repo]));
         Ok(())

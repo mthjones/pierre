@@ -1,16 +1,14 @@
-mod manager;
-
 use slack_api::{self, Event, Message};
 use pierre::{self, config};
 
 pub struct EventHandler {
-    user: String,
+    configs: Config,
 }
 
 impl EventHandler {
-    pub fn new(user: String) -> Self {
+    pub fn new(config: Config) -> Self {
         EventHandler {
-            user: user,
+            config: config,
         }
     }
 }
@@ -22,7 +20,7 @@ impl slack_api::EventHandler for EventHandler {
         
         match event {
             Ok(&Event::Message(Message::Standard { text: Some(ref t), .. } )) => {
-                match t.find(&format!("@{}", self.user)) {
+                match t.find(&format!("@{}", self.config.slack.user)) {
                     Some(_) => {
                         println!("You talkin' to me?");
                         let re = Regex::new(format!(r"<@{}> watch (\w)\\(\w) --notify (\w)", self.user)).unwrap();
@@ -30,7 +28,8 @@ impl slack_api::EventHandler for EventHandler {
                         let proj = cap.at(0);
                         let repo = cap.at(1);
                         let scope = cap.at(2);
-                        manager::configure_repos(proj, repo, scope);
+                        let manager = RepoPrefsManager::new(self.config.db);
+                        manager::update(proj, repo, scope);
                     }
                     _ => println!("Not my concern"),
                 }
