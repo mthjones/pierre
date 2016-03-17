@@ -1,10 +1,10 @@
 extern crate slack as slack_api;
 extern crate pierre;
 
-mod slack;
+mod event_handler;
 
 use pierre::config::Config;
-use slack::EventHandler;
+use event_handler::EventHandler;
 
 fn main() {
     
@@ -15,8 +15,5 @@ fn main() {
     let mut handler = EventHandler::new(config.slack.user);
     let mut cli = slack_api::RtmClient::new(config.slack.token.as_str());
     let r = cli.login_and_run::<EventHandler>(&mut handler);
-    match r {
-        Ok(_) => {}
-        Err(err) => panic!("Error: {}", err),
-    }
+    r.expect("Error!");
 }
