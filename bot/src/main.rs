@@ -15,7 +15,7 @@ fn main() {
     let filepath = format!("{}/.pierre_config", home_dir.to_string_lossy());
     let mut config = Config::load(&filepath).expect(&format!("Could not load config at {}", filepath));
 
-    let mut handler = EventHandler::new(config.slack.user, config.db);
+    let mut handler = EventHandler::new(config.slack.user, config.db, config.slack.channel);
     let mut cli = slack_api::RtmClient::new(config.slack.token.as_str());
     let r = cli.login_and_run::<EventHandler>(&mut handler);
     match r {
