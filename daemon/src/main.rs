@@ -1,6 +1,9 @@
 #![cfg_attr(feature = "serde_macros", feature(custom_derive, plugin))]
 #![cfg_attr(feature = "serde_macros", plugin(serde_macros))]
 
+#[macro_use] extern crate log;
+extern crate log4rs;
+
 extern crate serde;
 extern crate serde_json;
 

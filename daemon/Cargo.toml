@@ -17,6 +17,8 @@ serde = "*"
 serde_json = "*"
 serde_macros = { version = "*", optional = true }
 rand = "*"
+log = "*"
+log4rs = "*"
 
 [build-dependencies]
 serde_codegen = { version = "*", optional = true }

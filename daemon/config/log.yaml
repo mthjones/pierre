@@ -1,0 +1,17 @@
+# Scan this file for changes every 30 seconds
+refresh_rate = 30
+
+# An appender named "stdout" that writes to stdout
+[appender.stdout]
+kind = "console"
+
+# An appender named "file" that writes to a file with a custom pattern
+[appender.file]
+kind = "file"
+path = "log/log.txt"
+pattern = "%d - [%l] - %m"
+
+# Set the default logging level to "info" and attach the "stdout" and "file" appenders
+[root]
+level = "warn"
+appenders = ["stdout","file"]
