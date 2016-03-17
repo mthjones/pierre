@@ -18,11 +18,11 @@ impl RepoPrefsDataModel {
         Ok(())
     }
 
-    pub fn all(conn: &Connection) -> Result<Vec<PullRequestDataModel>, postgres::error::Error> {
+    pub fn all(conn: &Connection) -> Result<Vec<RepoPrefsDataModel>, postgres::error::Error> {
         let statement = try!(conn.prepare("SELECT * FROM repo_prefs"));
         let results = try!(statement.query(&[]));
         Ok(results.iter().map(|r| RepoPrefsDataModel {
-            aud: r.get(0),
+            audience: r.get(0),
             project: r.get(1),
             repo: r.get(2)
         }).collect::<Vec<_>>())

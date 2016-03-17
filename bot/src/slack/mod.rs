@@ -1,14 +1,18 @@
 use slack_api::{self, Event, Message};
 use pierre::{self, config};
+use regex::Regex;
+use repo_prefs;
 
 pub struct EventHandler {
-    configs: Config,
+    user: String,
+    db: String,
 }
 
 impl EventHandler {
-    pub fn new(config: Config) -> Self {
+    pub fn new(user: String, db: String) -> Self {
         EventHandler {
-            config: config,
+            user: user,
+            db: db,
         }
     }
 }
@@ -20,16 +24,18 @@ impl slack_api::EventHandler for EventHandler {
         
         match event {
             Ok(&Event::Message(Message::Standard { text: Some(ref t), .. } )) => {
-                match t.find(&format!("@{}", self.config.slack.user)) {
+                match t.find(&format!("@{}", self.user)) {
                     Some(_) => {
                         println!("You talkin' to me?");
-                        let re = Regex::new(format!(r"<@{}> watch (\w)\\(\w) --notify (\w)", self.user)).unwrap();
-                        let cap = re.captures(text).unwrap();
-                        let proj = cap.at(0);
-                        let repo = cap.at(1);
-                        let scope = cap.at(2);
-                        let manager = RepoPrefsManager::new(self.config.db);
-                        manager::update(proj, repo, scope);
+                        let re = Regex::new(&format!(r"<@{}> watch (\w+)/(\w+) --notify (\w+)$", self.user)).unwrap();
+                        if re.is_match(t) {
+                            let cap = re.captures(t).unwrap();
+                            let proj = cap.at(1);
+                            let repo = cap.at(2);
+                            let scope = cap.at(3);
+                            let manager = repo_prefs::RepoPrefsManager::new(&self.db);
+                            manager.update(String::from(proj.unwrap()), String::from(repo.unwrap()), String::from(scope.unwrap()));
+                        }
                     }
                     _ => println!("Not my concern"),
                 }

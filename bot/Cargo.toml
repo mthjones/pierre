@@ -4,5 +4,7 @@ version = "0.1.0"
 authors = ["Matt Jones <mthjones@gmail.com>"]
 
 [dependencies]
+regex = "0.1"
+postgres = "0.10.0"
 slack = "0.13.0"
 pierre = { path = "../lib" }

@@ -3,7 +3,6 @@
 
 extern crate serde;
 extern crate serde_json;
-extern crate postgres;
 
 #[cfg(feature = "serde_macros")]
 include!("lib.rs.in");
