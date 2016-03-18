@@ -29,7 +29,7 @@ impl RepoPrefsDataModel {
     }
 
     pub fn all_for_scope(conn: &Connection, project: &String, repo: &String) -> Result<Vec<RepoPrefsDataModel>, postgres::error::Error> {
-        let statement = try!(conn.prepare("SELECT * FROM repo_prefs WHERE project = $2 AND repo = $3"));
+        let statement = try!(conn.prepare("SELECT * FROM repo_prefs WHERE project = $1 AND repo = $2"));
         let results = try!(statement.query(&[project, repo]));
         Ok(results.iter().map(|r| RepoPrefsDataModel {
             audience: r.get(0),

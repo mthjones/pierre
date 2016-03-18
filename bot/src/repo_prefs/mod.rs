@@ -17,7 +17,7 @@ impl RepoPrefsManager {
     pub fn fetch_all(&self) -> Vec<RepoPrefsDataModel> {
         RepoPrefsDataModel::all(&self.conn).unwrap()
     }
-    pub fn update(&self, audience: String, project: String, repo: String) {
-        RepoPrefsDataModel::insert(&self.conn, &audience, &project, &repo).unwrap();
+    pub fn update(&self, audience: &String, project: &String, repo: &String) {
+        RepoPrefsDataModel::insert(&self.conn, audience, project, repo).unwrap();
     }
 }

@@ -25,11 +25,11 @@ impl slack_api::EventHandler for EventHandler {
         println!("on_event(event: {:?}, raw_json: {:?})", event, raw_json);
         
         match event {
-            Ok(&Event::Message(Message::Standard { text: Some(ref t), .. } )) => {
+            Ok(&Event::Message(Message::Standard { text: Some(ref t), channel: Some(ref c), .. } )) => {
                 match t.find(&format!("@{}", self.user)) {
                     Some(_) => {
                         println!("You talkin' to me?");
-                        let re1 = Regex::new(&format!(r"<@{}> watch (\w+)/(\w+) --notify (\w+)$", self.user)).unwrap();
+                        let re1 = Regex::new(&format!(r"<@{}> watch (\w+)/(\w+)$", self.user)).unwrap();
                         let re2 = Regex::new(&format!(r"<@{}> h[ae]lp$", self.user)).unwrap();
                         let re3 = Regex::new(&format!(r"<@{}> h[eau]llo|hi$", self.user)).unwrap();
                         let re4 = Regex::new(&format!(r"<@{}> where is Matt$", self.user)).unwrap();
@@ -39,7 +39,7 @@ impl slack_api::EventHandler for EventHandler {
                             let repo = cap.at(2);
                             let scope = cap.at(3);
                             let manager = repo_prefs::RepoPrefsManager::new(&self.db);
-                            manager.update(String::from(proj.unwrap()), String::from(repo.unwrap()), String::from(scope.unwrap()));
+                            manager.update(c, &String::from(proj.unwrap()), &String::from(repo.unwrap()));
                             let _ = cli.post_message(self.channel.as_str(), "Updated repo preferences!", None);
                         } else if re2.is_match(t) {
                             let _ = cli.post_message(self.channel.as_str(), "No.", None);

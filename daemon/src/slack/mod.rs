@@ -9,6 +9,9 @@ use postgres::{Connection,SslMode};
 mod attachment_builder;
 use self::attachment_builder::*;
 
+mod model;
+use self::model::RepoPrefsDataModel;
+
 use ::models::PullRequestDataModel;
 use ::watcher::EventHandler;
 
@@ -76,11 +79,17 @@ impl EventHandler<::stash::PullRequest> for SlackPullRequestEventHandler {
         let conn = try!(Connection::connect(&self.conn_str[..], &SslMode::None));
         let processed_prs = try!(PullRequestDataModel::all(&conn));
 
-        for pr in prs.into_iter().filter(|pr| !processed_prs.contains(&pr.clone().into())) {
+        let pr_channel_assocs = prs.into_iter().map(|pr| {
+            let channels = RepoPrefsDataModel::all_for_scope(&conn, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug);
+            (pr, channels.unwrap())
+        });
+
+        for (pr, channels) in pr_channel_assocs.into_iter().filter(|&(ref pr, ref channels)| !processed_prs.contains(&pr.clone().into())) {
             match self.build_attachment_from_pr(&pr) {
                 Ok(attachment) => {
                     try!(PullRequestDataModel::create(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug));
-                    if let Err(e) = slack_api::api::chat::post_message(&self.client, &self.token, &self.channel, "*New Pull Request!*", Some("pierre"), Some(true), None, None, Some(vec![attachment]), None, None, None, None) {
+                    let c = if channels.is_empty() { &self.channel } else { &channels[0].audience };
+                    if let Err(e) = slack_api::api::chat::post_message(&self.client, &self.token, c, "*New Pull Request!*", Some("pierre"), Some(true), None, None, Some(vec![attachment]), None, None, None, None) {
                         PullRequestDataModel::delete(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug).unwrap();
                         return Err(Box::new(e));
                     }
