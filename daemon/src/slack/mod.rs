@@ -88,10 +88,11 @@ impl EventHandler<::stash::PullRequest> for SlackPullRequestEventHandler {
             match self.build_attachment_from_pr(&pr) {
                 Ok(attachment) => {
                     try!(PullRequestDataModel::create(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug));
-                    let c = if channels.is_empty() { &self.channel } else { &channels[0].audience };
-                    if let Err(e) = slack_api::api::chat::post_message(&self.client, &self.token, c, "*New Pull Request!*", Some("pierre"), Some(true), None, None, Some(vec![attachment]), None, None, None, None) {
-                        PullRequestDataModel::delete(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug).unwrap();
-                        return Err(Box::new(e));
+                    for c in channels {
+                        if let Err(e) = slack_api::api::chat::post_message(&self.client, &self.token, c.audience.as_str(), "*New Pull Request!*", Some("pierre"), Some(true), None, None, Some(vec![attachment.clone()]), None, None, None, None) {
+                            PullRequestDataModel::delete(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug).unwrap();
+                            return Err(Box::new(e));
+                        }
                     }
                 },
                 Err(_) => {
