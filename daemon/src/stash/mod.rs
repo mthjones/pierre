@@ -1,9 +1,6 @@
 use std::error;
-use std::io::Read;
 
-use serde_json;
-use hyper;
-use hyper::header::{Headers, Authorization, Basic};
+use reqwest;
 use pierre::config;
 
 use ::watcher::Retriever;
@@ -15,13 +12,13 @@ pub struct StashPullRequestDataRetriever {
     base_url: String,
     username: String,
     password: Option<String>,
-    client: hyper::Client,
+    client: reqwest::Client,
     project: config::Project
 }
 
 impl StashPullRequestDataRetriever {
     pub fn new(project: config::Project, auth: (String, Option<String>), base_url: String) -> Self {
-        let client = hyper::Client::new();
+        let client = reqwest::Client::new().unwrap();
         StashPullRequestDataRetriever {
             base_url: base_url,
             username: auth.0,
@@ -34,10 +31,15 @@ impl StashPullRequestDataRetriever {
 
 impl Retriever<PullRequest> for StashPullRequestDataRetriever {
     fn retrieve(&self) -> Result<Vec<PullRequest>, Box<error::Error>> {
-        let mut headers = Headers::new();
-        headers.set(Authorization(Basic { username: self.username.clone(), password: self.password.clone() }));
-        headers.set(hyper::header::Connection::close());
-        headers.set(hyper::header::UserAgent("pierre/1.0".to_owned()));
+        let mut headers = reqwest::header::Headers::new();
+        headers.set(reqwest::header::Authorization(
+            reqwest::header::Basic {
+                username: self.username.clone(),
+                password: self.password.clone()
+            }
+        ));
+        headers.set(reqwest::header::Connection::close());
+        headers.set(reqwest::header::UserAgent("pierre/1.0".to_owned()));
 
         let url = format!("{}/rest/api/1.0/projects/{}/repos/{}/pull-requests",
             self.base_url,
@@ -46,14 +48,9 @@ impl Retriever<PullRequest> for StashPullRequestDataRetriever {
             
         println!("{}", url);
 
-        let mut response = try!(self.client.get(&url).headers(headers.clone()).send());
+        let mut response = self.client.get(&url).headers(headers).send()?;
 
-        let mut body = String::new();
-        try!(response.read_to_string(&mut body));
-        
-        println!("{}", body);
-
-        let prs: PagedData<PullRequest> = try!(serde_json::from_str(&body));
+        let prs: PagedData<PullRequest> = try!(response.json());
         Ok(prs.values)
     }
 }

@@ -2,22 +2,13 @@
 name = "pierre_daemon"
 version = "0.1.0"
 authors = ["Matt Jones <mthjones@gmail.com>"]
-build = "build.rs"
-
-[features]
-default = ["serde_codegen"]
-nightly = ["serde_macros"]
 
 [dependencies]
 pierre = { path = "../lib" }
-slack = { git = "https://github.com/mthjones/slack-rs", branch = "attachment-api" }
-hyper = "0.7.2"
+slack_api = { git = "https://github.com/slack-rs/slack-rs-api", branch = "codegen" }
+reqwest = "0.4.0"
 postgres = "0.10.0"
-serde = "*"
-serde_json = "*"
-serde_macros = { version = "*", optional = true }
+serde = "0.9.0"
+serde_json = "0.9.0"
+serde_derive = "0.9.0"
 rand = "*"
-
-[build-dependencies]
-serde_codegen = { version = "*", optional = true }
-syntex = "*"

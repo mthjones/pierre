@@ -2,8 +2,9 @@ use std::collections::HashMap;
 use std::error;
 
 use rand;
-use hyper;
+use reqwest;
 use slack_api;
+use serde_json;
 use postgres::{Connection,SslMode};
 
 mod attachment_builder;
@@ -15,14 +16,14 @@ use ::watcher::EventHandler;
 pub struct SlackPullRequestEventHandler {
     conn_str: String,
     user_map: HashMap<String, String>,
-    client: hyper::Client,
+    client: reqwest::Client,
     channel: String,
     token: String
 }
 
 impl SlackPullRequestEventHandler {
     pub fn new(conn_str: String, user_map: HashMap<String, String>, channel: String, token: String) -> Self {
-        let client = hyper::Client::new();
+        let client = reqwest::Client::new().unwrap();
         SlackPullRequestEventHandler {
             conn_str: conn_str,
             user_map: user_map,
@@ -32,7 +33,7 @@ impl SlackPullRequestEventHandler {
         }
     }
 
-    fn build_attachment_from_pr(&self, pr: &::stash::PullRequest) -> Result<slack_api::Attachment, String> {
+    fn build_attachment_from_pr(&self, pr: &::stash::PullRequest) -> Result<Attachment, String> {
         let mut rng = rand::thread_rng();
         let pr = pr.clone();
         let reviewers = pr.reviewers.iter()
@@ -41,10 +42,10 @@ impl SlackPullRequestEventHandler {
         if reviewers.is_empty() {
             return Err("No reviewers.".to_owned());
         }
-        let reviewers_field = slack_api::api::AttachmentField {
-            title: "Reviewers".to_owned(),
-            value: reviewers.join(", "),
-            short: false
+        let reviewers_field = AttachmentField {
+            title: Some("Reviewers".to_owned()),
+            value: Some(reviewers.join(", ")),
+            short: Some(false)
         };
         let text = pr.description.unwrap_or("".to_owned());
         let fallback = format!("*New Pull Request!\n*{}*\nAssigned to: {}", pr.title, reviewers.join(", "));
@@ -59,10 +60,10 @@ impl SlackPullRequestEventHandler {
             .add_field(reviewers_field);
 
         if !reviewers.is_empty() {
-            let assigned_demoer_field = slack_api::api::AttachmentField {
-                title: "Assigned Demo Reviewer".to_owned(),
-                value: rand::sample(&mut rng, reviewers.clone().into_iter(), 1)[0].clone(),
-                short: true
+            let assigned_demoer_field = AttachmentField {
+                title: Some("Assigned Demo Reviewer".to_owned()),
+                value: Some(rand::sample(&mut rng, reviewers.clone().into_iter(), 1)[0].clone()),
+                short: Some(true)
             };
             builder = builder.add_field(assigned_demoer_field);
         }
@@ -80,7 +81,18 @@ impl EventHandler<::stash::PullRequest> for SlackPullRequestEventHandler {
             match self.build_attachment_from_pr(&pr) {
                 Ok(attachment) => {
                     try!(PullRequestDataModel::create(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug));
-                    if let Err(e) = slack_api::api::chat::post_message(&self.client, &self.token, &self.channel, "*New Pull Request!*", Some("pierre"), Some(true), None, None, Some(vec![attachment]), None, None, None, None) {
+                    let serialized_attachments = serde_json::to_string(&[attachment]).unwrap();
+                    let message = slack_api::chat::PostMessageRequest {
+                        token: &self.token,
+                        channel: &self.channel,
+                        text: "*New Pull Request!*",
+                        username: Some("pierre"),
+                        as_user: Some(true),
+                        attachments: Some(&serialized_attachments),
+                        ..slack_api::chat::PostMessageRequest::default()
+                    };
+
+                    if let Err(e) = slack_api::chat::post_message(&self.client, &message) {
                         PullRequestDataModel::delete(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug).unwrap();
                         return Err(Box::new(e));
                     }

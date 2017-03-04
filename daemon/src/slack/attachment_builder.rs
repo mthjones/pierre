@@ -1,11 +1,36 @@
-use slack_api;
+#[derive(Clone, Debug, Serialize)]
+pub struct Attachment {
+    pub author_icon: Option<String>,
+    pub author_link: Option<String>,
+    pub author_name: Option<String>,
+    pub color: Option<String>,
+    pub fallback: Option<String>,
+    pub fields: Option<Vec<AttachmentField>>,
+    pub footer: Option<String>,
+    pub footer_icon: Option<String>,
+    pub image_url: Option<String>,
+    pub pretext: Option<String>,
+    pub text: Option<String>,
+    pub thumb_url: Option<String>,
+    pub title: Option<String>,
+    pub title_link: Option<String>,
+}
 
+#[derive(Clone, Debug, Serialize)]
+pub struct AttachmentField {
+    pub short: Option<bool>,
+    pub title: Option<String>,
+    pub value: Option<String>,
+}
+
+#[derive(Clone, Debug)]
 pub struct AttachmentAuthor {
     name: String,
     link: Option<String>,
     icon: Option<String>,
 }
 
+#[derive(Clone, Debug)]
 pub struct AttachmentAuthorBuilder {
     name: String,
     link: Option<String>,
@@ -49,7 +74,7 @@ pub struct AttachmentBuilder {
     title: Option<String>,
     title_link: Option<String>,
     text: String,
-    fields: Vec<slack_api::api::AttachmentField>,
+    fields: Vec<AttachmentField>,
     image_url: Option<String>,
     thumb_url: Option<String>,
 }
@@ -102,13 +127,13 @@ impl AttachmentBuilder {
         self
     }
 
-    pub fn add_field(mut self, field: slack_api::api::AttachmentField) -> Self {
+    pub fn add_field(mut self, field: AttachmentField) -> Self {
         self.fields.push(field);
         self
     }
 
-    pub fn build(self) -> slack_api::api::Attachment {
-        slack_api::api::Attachment {
+    pub fn build(self) -> Attachment {
+        Attachment {
             fallback: Some(self.fallback),
             color: self.color,
             pretext: self.pretext,
@@ -125,6 +150,8 @@ impl AttachmentBuilder {
             },
             image_url: self.image_url,
             thumb_url: self.thumb_url,
+            footer: None,
+            footer_icon: None,
         }
     }
 }

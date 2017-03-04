@@ -2,17 +2,8 @@
 name = "pierre"
 version = "0.1.0"
 authors = ["Matt Jones <mthjones@gmail.com>"]
-build = "build.rs"
-
-[features]
-default = ["serde_codegen"]
-nightly = ["serde_macros"]
 
 [dependencies]
-serde = "*"
-serde_json = "*"
-serde_macros = { version = "*", optional = true }
-
-[build-dependencies]
-serde_codegen = { version = "*", optional = true }
-syntex = "*"
+serde = "0.9.0"
+serde_json = "0.9.0"
+serde_derive = "0.9.0"
