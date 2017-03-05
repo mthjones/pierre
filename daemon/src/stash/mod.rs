@@ -1,9 +1,7 @@
-use std::error;
-
 use reqwest;
 use pierre::config;
 
-use ::watcher::Retriever;
+use std::error;
 
 mod api;
 pub use self::api::*;
@@ -27,10 +25,8 @@ impl StashPullRequestDataRetriever {
             project: project
         }
     }
-}
 
-impl Retriever<PullRequest> for StashPullRequestDataRetriever {
-    fn retrieve(&self) -> Result<Vec<PullRequest>, Box<error::Error>> {
+    pub fn get_pull_requests(&self) -> Result<Vec<PullRequest>, Box<error::Error>> {
         let mut headers = reqwest::header::Headers::new();
         headers.set(reqwest::header::Authorization(
             reqwest::header::Basic {
