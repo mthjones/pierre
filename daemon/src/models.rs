@@ -1,6 +1,77 @@
 use postgres::{self, Connection};
+use rusoto::dynamodb::{DynamoDbClient, BatchGetItemInput, BatchGetRequestMap, KeysAndAttributes, KeyList, AttributeMap};
 
 use ::stash::PullRequest;
+
+struct Stored {
+    
+}
+
+impl Stored {
+    fn save(&self) -> Result<(), ()>;
+    fn delete(&self) -> Result<(), ()>;
+}
+
+trait Store {
+    type Item;
+    type Key;
+
+    fn list() -> Result<Vec<Self::Item>, ()>;
+    fn find(key: &Self::Key) -> Result<Self::Item, ()>;
+}
+
+impl From<AttributeMap> for PullRequest {
+    fn from(map: AttributeMap) -> Self {
+        PullRequest {
+            ...
+        }
+    }
+}
+
+struct PullRequestDataStore<'a> {
+    dynamo: &'a DynamoDbClient
+}
+
+impl<'a> Store for PullRequestDataStore<'a> {
+    type Item = PullRequest;
+    type Key = PullRequestKey;
+
+    fn list() -> Result<Vec<Self::Item>, ()> {
+        let request_map: BatchGetRequestMap = [
+            ["PullRequests", KeysAndAttributes {
+                keys: KeyList::new(),
+                ..KeysAndAttributes::default()
+            }]
+        ].iter().collect();
+
+        let response = self.dynamo.batch_get_item(BatchGetItemInput {
+            request_items: request_map,
+            return_consumed_capacity: None
+        }).map_err(|_|, ())?;
+
+        if let Some(pull_request_data) = response.responses.map(|r| r.get("PullRequests")) {
+            Ok(pull_request_data.iter().map(PullRequest::from).collect())
+        } else {
+            Err(())
+        }
+    }
+
+    fn find(key: &Self::Key) -> Result<Self::Item, ()> {
+
+    }
+}
+
+#[derive(PartialEq,Eq)]
+pub struct PullRequestKey {
+    pub id: u32,
+    pub project: String,
+    pub repo: String
+}
+
+impl Stored<PullRequestKey> for PullRequest {
+    fn save(&self) -> Result<(), ()>;
+    fn delete(&self) -> Result<(), ()>;
+}
 
 #[derive(PartialEq,Eq)]
 pub struct PullRequestDataModel {

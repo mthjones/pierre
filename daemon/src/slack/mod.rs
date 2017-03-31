@@ -83,7 +83,6 @@ impl EventHandler<::stash::PullRequest> for SlackPullRequestEventHandler {
                     try!(PullRequestDataModel::create(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug));
                     let serialized_attachments = serde_json::to_string(&[attachment]).unwrap();
                     let message = slack_api::chat::PostMessageRequest {
-                        token: &self.token,
                         channel: &self.channel,
                         text: "*New Pull Request!*",
                         username: Some("pierre"),
@@ -92,7 +91,7 @@ impl EventHandler<::stash::PullRequest> for SlackPullRequestEventHandler {
                         ..slack_api::chat::PostMessageRequest::default()
                     };
 
-                    if let Err(e) = slack_api::chat::post_message(&self.client, &message) {
+                    if let Err(e) = slack_api::chat::post_message(&self.client, &self.token, &message) {
                         PullRequestDataModel::delete(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug).unwrap();
                         return Err(Box::new(e));
                     }
