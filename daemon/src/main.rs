@@ -10,18 +10,18 @@ extern crate serde_json;
 extern crate rusoto;
 extern crate chrono;
 
+use std::sync::mpsc;
 use std::time::Duration;
+use std::thread;
 use postgres::{Connection, SslMode};
 use rusoto::{ProvideAwsCredentials, AwsCredentials, CredentialsError, default_tls_client, Region};
 use rusoto::dynamodb::DynamoDbClient;
 use chrono::{DateTime, UTC};
 
 mod stash;
-mod watcher;
 mod slack;
 mod models;
 
-use watcher::Watcher;
 use pierre::config::Config;
 use slack::SlackPullRequestEventHandler;
 use stash::StashPullRequestDataRetriever;
@@ -52,15 +52,41 @@ fn main() {
         }
     }
 
-    let watchers = config.projects.iter().map(|p| {
-        let config = config.clone();
-        let retriever = StashPullRequestDataRetriever::new(p.clone(), (config.stash.username, config.stash.password), config.stash.base_url);
-        let handler = SlackPullRequestEventHandler::new(config.db, config.users, config.slack.channel, config.slack.token);
-        let watcher = Watcher::new(Box::new(retriever), Box::new(handler), Duration::from_secs(15 * 60));
-        watcher.watch()
-    }).collect::<Vec<_>>();
+    let poll_interval = Duration::from_secs(15 * 60);
 
-    for watcher in watchers {
-        watcher.join().unwrap();
+    let mut threads = vec![];
+    let (tx, rx) = mpsc::channel();
+
+    for project in config.projects.iter() {
+        let tx = tx.clone();
+        let retriever = StashPullRequestDataRetriever::new(project.clone(), (config.stash.username.clone(), config.stash.password.clone()), config.stash.base_url.clone());
+        let t = thread::spawn(move || {
+            loop {
+                match retriever.get_pull_requests() {
+                    Ok(prs) => {
+                        for pr in prs {
+                            let _ = tx.send(pr);
+                        }
+                    },
+                    Err(e) => println!("{}", e.description())
+                }
+                
+                thread::sleep(poll_interval);
+            }
+        });
+        threads.push(t);
     }
+
+    let post_thread = thread::spawn(move || {
+        let sender = SlackPullRequestEventHandler::new(config.db.clone(), config.users.clone(), config.slack.channel.clone(), config.slack.token.clone());
+        for pr in rx.iter() {
+            let _ = sender.on_data(pr);
+        }
+    });
+
+    for t in threads {
+        t.join().unwrap();
+    }
+
+    post_thread.join().unwrap();
 }
