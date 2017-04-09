@@ -1,4 +1,10 @@
-use reqwest;
+extern crate pierre;
+extern crate reqwest;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_json;
+
 use pierre::config;
 
 use std::error;
@@ -48,5 +54,38 @@ impl StashPullRequestDataRetriever {
 
         let prs: PagedData<PullRequest> = try!(response.json());
         Ok(prs.values)
+    }
+}
+
+fn main() {
+    let config = Config::load_default().expect("Could not load config at default location");
+
+    let http_client = reqwest::Client::new();
+    
+    let poll_interval = Duration::from_secs(15 * 60);
+
+    let mut threads = vec![];
+    for project in config.projects.iter() {
+        let tx = tx.clone();
+        let retriever = StashPullRequestDataRetriever::new(project.clone(), (config.stash.username.clone(), config.stash.password.clone()), config.stash.base_url.clone());
+        let t = thread::spawn(move || {
+            loop {
+                match retriever.get_pull_requests() {
+                    Ok(prs) => {
+                        for pr in prs {
+                            http_client.post("http://localhost:9000/")
+                        }
+                    },
+                    Err(e) => println!("{}", e.description())
+                }
+                
+                thread::sleep(poll_interval);
+            }
+        });
+        threads.push(t);
+    }
+
+    for t in threads {
+        t.join().unwrap();
     }
 }

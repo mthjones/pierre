@@ -28,9 +28,7 @@ use stash::StashPullRequestDataRetriever;
 use store::{Store, Keyed, DynamoDataStore};
 
 fn main() {
-    let home_dir = std::env::home_dir().expect("Could not find home directory to place config");
-    let filepath = format!("{}/.pierre_config", home_dir.to_string_lossy());
-    let mut config = Config::load(&filepath).expect(&format!("Could not load config at {}", filepath));
+    let mut config = Config::load_default().expect("Could not load config at default location");
 
     let aws_credentials_provider = DefaultCredentialsProviderSync::new().unwrap();
     let db = DynamoDbClient::new(default_tls_client().unwrap(), aws_credentials_provider, Region::UsEast1);

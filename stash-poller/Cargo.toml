@@ -1,0 +1,11 @@
+[package]
+name = "stash-poller"
+version = "0.1.0"
+authors = ["Matt Jones <mthjones@gmail.com>"]
+
+[dependencies]
+pierre = { path = "../lib" }
+reqwest = "0.5.1"
+serde = "0.9.0"
+serde_json = "0.9.0"
+serde_derive = "0.9.0"

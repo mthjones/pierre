@@ -7,6 +7,7 @@ use serde_json;
 
 #[derive(Debug)]
 pub enum ConfigError {
+    Environment(String),
     Io(io::Error),
     Parse(serde_json::error::Error),
 }
@@ -48,6 +49,12 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn load_default() -> Result<Self, ConfigError> {
+        let home_dir = std::env::home_dir().ok_or(ConfigError::Environment("Could not find home directory to place config"))?;
+        let filepath = format!("{}/.pierre_config", home_dir.to_string_lossy());
+        Self::load(&filepath)
+    }
+
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, ConfigError> {
         let mut f = try!(File::open(&path).map_err(ConfigError::Io));
         let mut contents = String::new();
