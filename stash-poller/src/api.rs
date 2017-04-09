@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-#[derive(Clone,Debug,Serialize,Deserialize)]
+#[derive(Clone,Debug,Default,Serialize,Deserialize)]
 pub struct PagedData<T> {
     pub size: u32,
     pub limit: u32,
@@ -12,7 +12,7 @@ pub struct PagedData<T> {
     pub next_page_start: Option<u32>,
 }
 
-#[derive(Clone,Debug,Serialize,Deserialize)]
+#[derive(Clone,Debug,Default,Serialize,Deserialize)]
 pub struct Project {
     pub id: u32,
     pub key: String,
@@ -26,7 +26,7 @@ pub struct Project {
     pub links: HashMap<String, Vec<LinkHref>>,
 }
 
-#[derive(Clone,Debug,Serialize,Deserialize)]
+#[derive(Clone,Debug,Default,Serialize,Deserialize)]
 pub struct Ref {
     pub id: String,
     pub repository: Repository,
@@ -38,7 +38,7 @@ pub struct Ref {
     pub latest_commit: String,
 }
 
-#[derive(Clone,Debug,Serialize,Deserialize)]
+#[derive(Clone,Debug,Default,Serialize,Deserialize)]
 pub struct Repository {
     pub id: u32,
     pub slug: String,
@@ -58,7 +58,7 @@ pub struct Repository {
     pub links: HashMap<String, Vec<LinkHref>>,
 }
 
-#[derive(Clone,Debug,Serialize,Deserialize)]
+#[derive(Clone,Debug,Default,Serialize,Deserialize)]
 pub struct User {
     pub name: String,
     #[serde(rename="emailAddress")]
@@ -74,26 +74,26 @@ pub struct User {
     pub links: HashMap<String, Vec<LinkHref>>,
 }
 
-#[derive(Clone,Debug,Serialize,Deserialize)]
+#[derive(Clone,Debug,Default,Serialize,Deserialize)]
 pub struct Author {
     pub user: User,
     pub role: String,
     pub approved: bool,
 }
 
-#[derive(Clone,Debug,Serialize,Deserialize)]
+#[derive(Clone,Debug,Default,Serialize,Deserialize)]
 pub struct Link {
     pub url: String,
     pub rel: String,
 }
 
-#[derive(Clone,Debug,Serialize,Deserialize)]
+#[derive(Clone,Debug,Default,Serialize,Deserialize)]
 pub struct LinkHref {
     pub href: String,
     pub name: Option<String>,
 }
 
-#[derive(Clone,Debug,Serialize,Deserialize)]
+#[derive(Clone,Debug,Default,Serialize,Deserialize)]
 pub struct PullRequest {
     pub id: u32,
     pub version: u32,
