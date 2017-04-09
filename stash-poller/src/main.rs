@@ -4,35 +4,53 @@ extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde_json;
+extern crate rusoto;
 
-use pierre::config;
+use pierre::config::{self, Config};
+use pierre::store::Store;
+use pierre::store::dynamodb::DynamoDataStore;
+use pierre::data::PullRequestData;
+
+use rusoto::{default_tls_client, Region, DefaultCredentialsProviderSync};
+use rusoto::dynamodb::DynamoDbClient;
 
 use std::error;
+use std::sync::Arc;
+use std::thread;
+use std::time::Duration;
 
 mod api;
-pub use self::api::*;
 
+impl From<api::PullRequest> for PullRequestData {
+    fn from(pr: api::PullRequest) -> PullRequestData {
+        PullRequestData {
+            id: pr.id,
+            project: pr.to_ref.repository.project.name.clone(),
+            repo: pr.to_ref.repository.name.clone(),
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct StashPullRequestDataRetriever {
     base_url: String,
     username: String,
     password: Option<String>,
-    client: reqwest::Client,
-    project: config::Project
+    client: reqwest::Client
 }
 
 impl StashPullRequestDataRetriever {
-    pub fn new(project: config::Project, auth: (String, Option<String>), base_url: String) -> Self {
+    pub fn new(auth: (String, Option<String>), base_url: String) -> Self {
         let client = reqwest::Client::new().unwrap();
         StashPullRequestDataRetriever {
             base_url: base_url,
             username: auth.0,
             password: auth.1,
-            client: client,
-            project: project
+            client: client
         }
     }
 
-    pub fn get_pull_requests(&self) -> Result<Vec<PullRequest>, Box<error::Error>> {
+    pub fn get_pull_requests(&self, project: &config::Project) -> Result<Vec<api::PullRequest>, Box<error::Error>> {
         let mut headers = reqwest::header::Headers::new();
         headers.set(reqwest::header::Authorization(
             reqwest::header::Basic {
@@ -45,43 +63,61 @@ impl StashPullRequestDataRetriever {
 
         let url = format!("{}/rest/api/1.0/projects/{}/repos/{}/pull-requests",
             self.base_url,
-            self.project.id.to_uppercase(),
-            self.project.repo.to_lowercase());
+            project.id.to_uppercase(),
+            project.repo.to_lowercase());
             
         println!("{}", url);
 
         let mut response = self.client.get(&url).headers(headers).send()?;
 
-        let prs: PagedData<PullRequest> = try!(response.json());
+        let prs: api::PagedData<api::PullRequest> = try!(response.json());
         Ok(prs.values)
     }
 }
 
 fn main() {
-    let config = Config::load_default().expect("Could not load config at default location");
+    let mut config = Config::load_default().expect("Could not load config at default location");
 
-    let http_client = reqwest::Client::new();
+    let aws_credentials_provider = DefaultCredentialsProviderSync::new().unwrap();
+    let db = DynamoDbClient::new(default_tls_client().unwrap(), aws_credentials_provider, Region::UsEast1);
+
+    if config.stash.password.is_none() {
+        if let Ok(password) = std::env::var("PIERRE_USER_PASSWORD") {
+            config.stash.password = Some(password);
+        }
+    }
+
+    let pr_store: Arc<DynamoDataStore<PullRequestData, _, _>> = Arc::new(DynamoDataStore::new(Arc::new(db), "PullRequests"));
+
+    let http_client = reqwest::Client::new().expect("Could not create http client");
     
     let poll_interval = Duration::from_secs(15 * 60);
 
+    let retriever = StashPullRequestDataRetriever::new((config.stash.username.clone(), config.stash.password.clone()), config.stash.base_url.clone());
+
     let mut threads = vec![];
-    for project in config.projects.iter() {
-        let tx = tx.clone();
-        let retriever = StashPullRequestDataRetriever::new(project.clone(), (config.stash.username.clone(), config.stash.password.clone()), config.stash.base_url.clone());
+    for project in config.projects {
+        let pr_store = pr_store.clone();
+        let retriever = retriever.clone();
+        let http_client = http_client.clone();
+
         let t = thread::spawn(move || {
             loop {
-                match retriever.get_pull_requests() {
-                    Ok(prs) => {
-                        for pr in prs {
-                            http_client.post("http://localhost:9000/")
+                if let Ok(prs) = retriever.get_pull_requests(&project) {
+                    for pr in prs {
+                        let pr_data: PullRequestData = pr.clone().into();
+                        if pr_store.create(pr_data).is_ok() {
+                            if let Ok(body) = serde_json::to_string(&pr) {
+                                let _ = http_client.post("http://localhost:9000/").body(body).send();
+                            }
                         }
-                    },
-                    Err(e) => println!("{}", e.description())
+                    }
                 }
                 
                 thread::sleep(poll_interval);
             }
         });
+
         threads.push(t);
     }
 

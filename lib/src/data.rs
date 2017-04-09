@@ -4,9 +4,9 @@ use ::store::Keyed;
 
 #[derive(Clone)]
 pub struct PullRequestData {
-    id: u32,
-    project: String,
-    repo: String,
+    pub id: u32,
+    pub project: String,
+    pub repo: String,
 }
 
 impl Keyed for PullRequestData {
@@ -17,16 +17,6 @@ impl Keyed for PullRequestData {
             id: self.id,
             project: self.project.clone(),
             repo: self.repo.clone()
-        }
-    }
-}
-
-impl From<::stash::PullRequest> for PullRequestData {
-    fn from(pr: ::stash::PullRequest) -> PullRequestData {
-        PullRequestData {
-            id: pr.id,
-            project: pr.to_ref.repository.project.name.clone(),
-            repo: pr.to_ref.repository.name.clone(),
         }
     }
 }

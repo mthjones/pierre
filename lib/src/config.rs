@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env;
 use std::fs::File;
 use std::io::{self, Read};
 use std::path::Path;
@@ -50,7 +51,7 @@ pub struct Config {
 
 impl Config {
     pub fn load_default() -> Result<Self, ConfigError> {
-        let home_dir = std::env::home_dir().ok_or(ConfigError::Environment("Could not find home directory to place config"))?;
+        let home_dir = env::home_dir().ok_or(ConfigError::Environment("Could not find home directory to place config".into()))?;
         let filepath = format!("{}/.pierre_config", home_dir.to_string_lossy());
         Self::load(&filepath)
     }

@@ -15,17 +15,13 @@ use std::time::Duration;
 use rusoto::{default_tls_client, Region, DefaultCredentialsProviderSync};
 use rusoto::dynamodb::DynamoDbClient;
 
-mod stash;
 mod slack;
-mod store;
-mod data;
-
-use data::PullRequestData;
 
 use pierre::config::Config;
+use pierre::store::{Store, Keyed, DynamoDataStore};
+use pierre::data::PullRequestData;
+
 use slack::SlackPullRequestEventHandler;
-use stash::StashPullRequestDataRetriever;
-use store::{Store, Keyed, DynamoDataStore};
 
 fn main() {
     let mut config = Config::load_default().expect("Could not load config at default location");

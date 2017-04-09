@@ -1,6 +1,4 @@
-pub use self::dynamodb::DynamoDataStore;
-
-mod dynamodb;
+pub mod dynamodb;
 
 pub trait Keyed {
     type Key: PartialEq<Self::Key>;
