@@ -8,22 +8,17 @@ use serde_json;
 mod attachment_builder;
 use self::attachment_builder::*;
 
-use ::store::{Store, Keyed};
-use ::PullRequestData;
-
-pub struct SlackPullRequestEventHandler<'a, S: Store<Item=PullRequestData> + 'a> {
-    store: &'a S,
+pub struct SlackPullRequestEventHandler {
     user_map: HashMap<String, String>,
     client: reqwest::Client,
     channel: String,
     token: String
 }
 
-impl<'a, S: Store<Item=PullRequestData> + 'a> SlackPullRequestEventHandler<'a, S> {
-    pub fn new(store: &'a S, user_map: HashMap<String, String>, channel: String, token: String) -> Self {
+impl SlackPullRequestEventHandler {
+    pub fn new(user_map: HashMap<String, String>, channel: String, token: String) -> Self {
         let client = reqwest::Client::new().unwrap();
         SlackPullRequestEventHandler {
-            store: store,
             user_map: user_map,
             client: client,
             channel: channel,
@@ -70,32 +65,19 @@ impl<'a, S: Store<Item=PullRequestData> + 'a> SlackPullRequestEventHandler<'a, S
     }
 
     pub fn on_data(&self, pr: ::stash::PullRequest) -> Result<(), ()> {
-        let pr_data: PullRequestData = pr.clone().into();
+        if let Ok(attachment) = self.build_attachment_from_pr(&pr) {
+            let serialized_attachments = serde_json::to_string(&[attachment]).unwrap();
+            let message = slack_api::chat::PostMessageRequest {
+                channel: &self.channel,
+                text: "*New Pull Request!*",
+                username: Some("pierre"),
+                as_user: Some(true),
+                attachments: Some(&serialized_attachments),
+                ..slack_api::chat::PostMessageRequest::default()
+            };
 
-        if self.store.list()?.iter().find(|ppr| ppr.key() == pr_data.key()).is_some() {
-            return Ok(());
-        }
-
-        match self.build_attachment_from_pr(&pr) {
-            Ok(attachment) => {
-                self.store.create(pr_data.clone())?;
-                let serialized_attachments = serde_json::to_string(&[attachment]).unwrap();
-                let message = slack_api::chat::PostMessageRequest {
-                    channel: &self.channel,
-                    text: "*New Pull Request!*",
-                    username: Some("pierre"),
-                    as_user: Some(true),
-                    attachments: Some(&serialized_attachments),
-                    ..slack_api::chat::PostMessageRequest::default()
-                };
-
-                if let Err(_) = slack_api::chat::post_message(&self.client, &self.token, &message) {
-                    self.store.delete(pr_data.key()).unwrap();
-                    return Err(());
-                }
-            },
-            Err(_) => {
-                self.store.create(pr_data)?;
+            if let Err(_) = slack_api::chat::post_message(&self.client, &self.token, &message) {
+                return Err(());
             }
         }
         Ok(())

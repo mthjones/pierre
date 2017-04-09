@@ -1,28 +1,29 @@
 use std::marker::PhantomData;
+use std::sync::Arc;
 
 use rusoto;
 use rusoto::dynamodb::{self, DynamoDbClient, BatchGetItemInput, BatchGetRequestMap, DeleteItemInput, GetItemInput, KeysAndAttributes, PutItemInput};
 
 use super::{Store, Keyed};
 
-pub struct DynamoDataStore<'a, T, P, D>
+pub struct DynamoDataStore<T, P, D>
   where T: Keyed + From<dynamodb::AttributeMap> + Into<dynamodb::AttributeMap>,
         T::Key: Into<dynamodb::Key>,
-        P: 'a + rusoto::ProvideAwsCredentials,
-        D: 'a + rusoto::DispatchSignedRequest
+        P: rusoto::ProvideAwsCredentials,
+        D: rusoto::DispatchSignedRequest
 {
-    client: &'a DynamoDbClient<P, D>,
+    client: Arc<DynamoDbClient<P, D>>,
     table_name: String,
     item_ty: PhantomData<T>
 }
 
-impl<'a, T, P:, D: rusoto::DispatchSignedRequest> DynamoDataStore<'a, T, P, D>
+impl<T, P:, D: rusoto::DispatchSignedRequest> DynamoDataStore<T, P, D>
   where T: Keyed + From<dynamodb::AttributeMap> + Into<dynamodb::AttributeMap>,
         T::Key: Into<dynamodb::Key>,
-        P: 'a + rusoto::ProvideAwsCredentials,
-        D: 'a + rusoto::DispatchSignedRequest
+        P: rusoto::ProvideAwsCredentials,
+        D: rusoto::DispatchSignedRequest
 {
-    pub fn new<S: Into<String>>(client: &'a DynamoDbClient<P, D>, table_name: S) -> Self {
+    pub fn new<S: Into<String>>(client: Arc<DynamoDbClient<P, D>>, table_name: S) -> Self {
         DynamoDataStore {
             client: client,
             table_name: table_name.into(),
@@ -31,11 +32,11 @@ impl<'a, T, P:, D: rusoto::DispatchSignedRequest> DynamoDataStore<'a, T, P, D>
     }
 }
 
-impl<'a, T, P, D> Store for DynamoDataStore<'a, T, P, D>
+impl<T, P, D> Store for DynamoDataStore<T, P, D>
   where T: Keyed + From<dynamodb::AttributeMap> + Into<dynamodb::AttributeMap>,
         T::Key: Into<dynamodb::Key>,
-        P: 'a + rusoto::ProvideAwsCredentials,
-        D: 'a + rusoto::DispatchSignedRequest
+        P: rusoto::ProvideAwsCredentials,
+        D: rusoto::DispatchSignedRequest
 {
     type Item = T;
 

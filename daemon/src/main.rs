@@ -8,7 +8,7 @@ extern crate serde_derive;
 extern crate serde_json;
 extern crate rusoto;
 
-use std::sync::mpsc;
+use std::sync::{Arc, mpsc};
 use std::thread;
 use std::time::Duration;
 
@@ -25,7 +25,7 @@ use data::PullRequestData;
 use pierre::config::Config;
 use slack::SlackPullRequestEventHandler;
 use stash::StashPullRequestDataRetriever;
-use store::DynamoDataStore;
+use store::{Store, Keyed, DynamoDataStore};
 
 fn main() {
     let home_dir = std::env::home_dir().expect("Could not find home directory to place config");
@@ -41,20 +41,33 @@ fn main() {
         }
     }
 
+    let pr_store: Arc<DynamoDataStore<PullRequestData, _, _>> = Arc::new(DynamoDataStore::new(Arc::new(db), "PullRequests"));
+
     let poll_interval = Duration::from_secs(15 * 60);
 
     let mut threads = vec![];
     let (tx, rx) = mpsc::channel();
 
     for project in config.projects.iter() {
+        let pr_store = pr_store.clone();
         let tx = tx.clone();
         let retriever = StashPullRequestDataRetriever::new(project.clone(), (config.stash.username.clone(), config.stash.password.clone()), config.stash.base_url.clone());
         let t = thread::spawn(move || {
             loop {
                 match retriever.get_pull_requests() {
                     Ok(prs) => {
+                        let processed_prs = pr_store.list().expect("Unable to get list of processed PRs");
+
                         for pr in prs {
-                            let _ = tx.send(pr);
+                            let pr_data: PullRequestData = pr.clone().into();
+
+                            if processed_prs.iter().find(|ppr| ppr.key() == pr_data.key()).is_some() {
+                                continue;
+                            }
+
+                            if let Ok(_) = pr_store.create(pr_data.clone()) {
+                                let _ = tx.send(pr);
+                            }
                         }
                     },
                     Err(e) => println!("{}", e.description())
@@ -67,12 +80,14 @@ fn main() {
     }
 
     let post_thread = thread::spawn(move || {
-        // Gross type shenanigans because of using PhantomData
-        let pr_store: DynamoDataStore<PullRequestData, _, _> = DynamoDataStore::new(&db, "PullRequests");
-
-        let sender = SlackPullRequestEventHandler::new(&pr_store, config.users.clone(), config.slack.channel.clone(), config.slack.token.clone());
+        let pr_store = pr_store.clone();
+        let sender = SlackPullRequestEventHandler::new(config.users.clone(), config.slack.channel.clone(), config.slack.token.clone());
         for pr in rx.iter() {
-            let _ = sender.on_data(pr);
+            let pr_data: PullRequestData = pr.clone().into();
+
+            if let Err(_) = sender.on_data(pr) {
+                let _ = pr_store.delete(pr_data.key());
+            }
         }
     });
 
