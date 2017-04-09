@@ -32,12 +32,19 @@ pub struct StashConfig {
 }
 
 #[derive(Debug,Clone,Serialize,Deserialize)]
+pub struct AwsConfig {
+    pub access_key: String,
+    pub secret: String,
+}
+
+#[derive(Debug,Clone,Serialize,Deserialize)]
 pub struct Config {
     pub db: String,
     pub projects: Vec<Project>,
     pub users: HashMap<String, String>,
     pub slack: SlackConfig,
     pub stash: StashConfig,
+    pub aws: AwsConfig,
 }
 
 impl Config {

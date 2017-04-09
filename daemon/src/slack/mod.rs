@@ -1,30 +1,29 @@
 use std::collections::HashMap;
-use std::error;
 
 use rand;
 use reqwest;
 use slack_api;
 use serde_json;
-use postgres::{Connection,SslMode};
 
 mod attachment_builder;
 use self::attachment_builder::*;
 
-use ::models::PullRequestDataModel;
+use ::store::{Store, Keyed};
+use ::PullRequestData;
 
-pub struct SlackPullRequestEventHandler {
-    conn_str: String,
+pub struct SlackPullRequestEventHandler<'a, S: Store<Item=PullRequestData> + 'a> {
+    store: &'a S,
     user_map: HashMap<String, String>,
     client: reqwest::Client,
     channel: String,
     token: String
 }
 
-impl SlackPullRequestEventHandler {
-    pub fn new(conn_str: String, user_map: HashMap<String, String>, channel: String, token: String) -> Self {
+impl<'a, S: Store<Item=PullRequestData> + 'a> SlackPullRequestEventHandler<'a, S> {
+    pub fn new(store: &'a S, user_map: HashMap<String, String>, channel: String, token: String) -> Self {
         let client = reqwest::Client::new().unwrap();
         SlackPullRequestEventHandler {
-            conn_str: conn_str,
+            store: store,
             user_map: user_map,
             client: client,
             channel: channel,
@@ -70,20 +69,18 @@ impl SlackPullRequestEventHandler {
         Ok(builder.build())
     }
 
-    pub fn on_data(&self, pr: ::stash::PullRequest) -> Result<(), Box<error::Error>> {
-        let conn = try!(Connection::connect(&self.conn_str[..], &SslMode::None));
-        let processed_prs = try!(PullRequestDataModel::all(&conn));
+    pub fn on_data(&self, pr: ::stash::PullRequest) -> Result<(), ()> {
+        let pr_data: PullRequestData = pr.clone().into();
 
-        if processed_prs.contains(&pr.clone().into()) {
+        if self.store.list()?.iter().find(|ppr| ppr.key() == pr_data.key()).is_some() {
             return Ok(());
         }
 
         match self.build_attachment_from_pr(&pr) {
             Ok(attachment) => {
-                try!(PullRequestDataModel::create(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug));
+                self.store.create(pr_data.clone())?;
                 let serialized_attachments = serde_json::to_string(&[attachment]).unwrap();
                 let message = slack_api::chat::PostMessageRequest {
-                    token: &self.token,
                     channel: &self.channel,
                     text: "*New Pull Request!*",
                     username: Some("pierre"),
@@ -92,13 +89,13 @@ impl SlackPullRequestEventHandler {
                     ..slack_api::chat::PostMessageRequest::default()
                 };
 
-                if let Err(e) = slack_api::chat::post_message(&self.client, &message) {
-                    PullRequestDataModel::delete(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug).unwrap();
-                    return Err(Box::new(e));
+                if let Err(_) = slack_api::chat::post_message(&self.client, &self.token, &message) {
+                    self.store.delete(pr_data.key()).unwrap();
+                    return Err(());
                 }
             },
             Err(_) => {
-                PullRequestDataModel::create(&conn, pr.id, &pr.to_ref.repository.project.key, &pr.to_ref.repository.slug).unwrap();
+                self.store.create(pr_data)?;
             }
         }
         Ok(())
