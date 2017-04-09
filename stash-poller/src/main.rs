@@ -15,6 +15,7 @@ use rusoto::{default_tls_client, Region, DefaultCredentialsProviderSync};
 use rusoto::dynamodb::DynamoDbClient;
 
 use std::error;
+use std::marker::PhantomData;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -28,6 +29,23 @@ impl From<api::PullRequest> for PullRequestData {
             project: pr.to_ref.repository.project.name.clone(),
             repo: pr.to_ref.repository.name.clone(),
         }
+    }
+}
+
+trait Notifier {
+    type Item;
+
+    fn notify(&self, item: Self::Item) -> Result<(), ()>;
+}
+
+#[derive(Clone)]
+struct Sink<'a, T: 'a>(PhantomData<&'a T>);
+
+impl<'a, T: 'a> Notifier for Sink<'a, T> {
+    type Item = &'a T;
+
+    fn notify(&self, _: Self::Item) -> Result<(), ()> {
+        Ok(())
     }
 }
 
@@ -89,7 +107,7 @@ fn main() {
 
     let pr_store: Arc<DynamoDataStore<PullRequestData, _, _>> = Arc::new(DynamoDataStore::new(Arc::new(db), "PullRequests"));
 
-    let http_client = reqwest::Client::new().expect("Could not create http client");
+    let notifier = Arc::new(Sink::<api::PullRequest>(PhantomData));
     
     let poll_interval = Duration::from_secs(15 * 60);
 
@@ -97,9 +115,9 @@ fn main() {
 
     let mut threads = vec![];
     for project in config.projects {
+        let notifier = notifier.clone();
         let pr_store = pr_store.clone();
         let retriever = retriever.clone();
-        let http_client = http_client.clone();
 
         let t = thread::spawn(move || {
             loop {
@@ -107,9 +125,7 @@ fn main() {
                     for pr in prs {
                         let pr_data: PullRequestData = pr.clone().into();
                         if pr_store.create(pr_data).is_ok() {
-                            if let Ok(body) = serde_json::to_string(&pr) {
-                                let _ = http_client.post("http://localhost:9000/").body(body).send();
-                            }
+                            let _ = notifier.notify(&pr);
                         }
                     }
                 }
