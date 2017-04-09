@@ -14,6 +14,8 @@ use pierre::data::PullRequestData;
 use rusoto::{default_tls_client, Region, DefaultCredentialsProviderSync};
 use rusoto::dynamodb::DynamoDbClient;
 
+use serde::Serialize;
+
 use std::error;
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -34,8 +36,9 @@ impl From<api::PullRequest> for PullRequestData {
 
 trait Notifier {
     type Item;
+    type Error;
 
-    fn notify(&self, item: Self::Item) -> Result<(), ()>;
+    fn notify(&self, item: Self::Item) -> Result<(), Self::Error>;
 }
 
 #[derive(Clone)]
@@ -43,9 +46,35 @@ struct Sink<'a, T: 'a>(PhantomData<&'a T>);
 
 impl<'a, T: 'a> Notifier for Sink<'a, T> {
     type Item = &'a T;
+    type Error = ();
 
-    fn notify(&self, _: Self::Item) -> Result<(), ()> {
+    fn notify(&self, _: Self::Item) -> Result<(), Self::Error> {
         Ok(())
+    }
+}
+
+struct HttpNotifier<'a, T: 'a> {
+    client: Arc<reqwest::Client>,
+    endpoint: String,
+    _ty: PhantomData<&'a T>
+}
+
+impl<'a, T: 'a> HttpNotifier<'a, T> {
+    fn new<S: Into<String>>(client: Arc<reqwest::Client>, endpoint: S) -> Self {
+        HttpNotifier {
+            client: client,
+            endpoint: endpoint.into(),
+            _ty: PhantomData
+        }
+    }
+}
+
+impl<'a, T: 'a + Serialize> Notifier for HttpNotifier<'a, T> {
+    type Item = &'a T;
+    type Error = reqwest::Error;
+
+    fn notify(&self, item: Self::Item) -> Result<(), Self::Error> {
+        self.client.post(&self.endpoint).json(item).send().map(|_| ())
     }
 }
 
@@ -54,12 +83,11 @@ pub struct StashPullRequestDataRetriever {
     base_url: String,
     username: String,
     password: Option<String>,
-    client: reqwest::Client
+    client: Arc<reqwest::Client>
 }
 
 impl StashPullRequestDataRetriever {
-    pub fn new(auth: (String, Option<String>), base_url: String) -> Self {
-        let client = reqwest::Client::new().unwrap();
+    pub fn new(client: Arc<reqwest::Client>, auth: (String, Option<String>), base_url: String) -> Self {
         StashPullRequestDataRetriever {
             base_url: base_url,
             username: auth.0,
@@ -88,7 +116,7 @@ impl StashPullRequestDataRetriever {
 
         let mut response = self.client.get(&url).headers(headers).send()?;
 
-        let prs: api::PagedData<api::PullRequest> = try!(response.json());
+        let prs: api::PagedData<api::PullRequest> = response.json()?;
         Ok(prs.values)
     }
 }
@@ -107,11 +135,12 @@ fn main() {
 
     let pr_store: Arc<DynamoDataStore<PullRequestData, _, _>> = Arc::new(DynamoDataStore::new(Arc::new(db), "PullRequests"));
 
-    let notifier = Arc::new(Sink::<api::PullRequest>(PhantomData));
+    let http_client = Arc::new(reqwest::Client::new().expect("Unable to create HTTP client"));
+    let notifier = Arc::new(HttpNotifier::<api::PullRequest>::new(http_client.clone(), "http://localhost:9000"));
     
     let poll_interval = Duration::from_secs(15 * 60);
 
-    let retriever = StashPullRequestDataRetriever::new((config.stash.username.clone(), config.stash.password.clone()), config.stash.base_url.clone());
+    let retriever = StashPullRequestDataRetriever::new(http_client.clone(), (config.stash.username.clone(), config.stash.password.clone()), config.stash.base_url.clone());
 
     let mut threads = vec![];
     for project in config.projects {

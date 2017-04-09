@@ -17,7 +17,7 @@ pub struct DynamoDataStore<T, P, D>
     item_ty: PhantomData<T>
 }
 
-impl<T, P:, D: rusoto::DispatchSignedRequest> DynamoDataStore<T, P, D>
+impl<T, P, D: rusoto::DispatchSignedRequest> DynamoDataStore<T, P, D>
   where T: Keyed + From<dynamodb::AttributeMap> + Into<dynamodb::AttributeMap>,
         T::Key: Into<dynamodb::Key>,
         P: rusoto::ProvideAwsCredentials,

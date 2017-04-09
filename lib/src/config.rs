@@ -51,7 +51,7 @@ pub struct Config {
 
 impl Config {
     pub fn load_default() -> Result<Self, ConfigError> {
-        let home_dir = env::home_dir().ok_or(ConfigError::Environment("Could not find home directory to place config".into()))?;
+        let home_dir = env::home_dir().ok_or(ConfigError::Environment("Could not find home directory to load config".into()))?;
         let filepath = format!("{}/.pierre_config", home_dir.to_string_lossy());
         Self::load(&filepath)
     }
