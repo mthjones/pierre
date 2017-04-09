@@ -1,4 +1,5 @@
 pub mod dynamodb;
+pub mod memstore;
 
 pub trait Keyed {
     type Key: PartialEq<Self::Key>;
